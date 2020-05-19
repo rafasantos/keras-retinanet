@@ -15,6 +15,12 @@ limitations under the License.
 """
 
 import keras
+from keras_retinanet.utils.colors import colors
+from keras_retinanet.utils.visualization import draw_box, draw_detections, draw_annotations
+import numpy as np
+import cv2
+import os
+
 from ..utils.eval import evaluate
 
 
@@ -91,6 +97,42 @@ class Evaluate(keras.callbacks.Callback):
                 summary_value.simple_value = self.mean_ap
                 summary_value.tag = "mAP"
                 self.tensorboard.writer.add_summary(summary, epoch)
+            else:
+                images_to_generate = min(15, self.generator.size())
+                images_index = 0
+                writer = tf.summary.create_file_writer(self.tensorboard.log_dir)
+                with writer.as_default():
+                    while images_index < images_to_generate:
+                        raw_image = self.generator.load_image(images_index)
+                        image = self.generator.preprocess_image(raw_image.copy())
+                        image, scale = self.generator.resize_image(image)
+                        # prediction
+                        boxes, scores, labels = self.model.predict_on_batch(np.expand_dims(image, axis=0))[:3]
+                        # correct boxes for image scale
+                        boxes /= scale
+                        # select indices which have a score above the threshold
+                        score_threshold = 0.5
+                        indices = np.where(scores[0, :] > score_threshold)[0]
+                        # select those scores
+                        scores = scores[0][indices]
+                        # find the order with which to sort the scores
+                        max_detections = 20
+                        scores_sort = np.argsort(-scores)[:max_detections]
+                        # select detections
+                        image_boxes = boxes[0, indices[scores_sort], :]
+                        image_scores = scores[scores_sort]
+                        image_labels = labels[0, indices[scores_sort]]
+                        draw_detections(raw_image, image_boxes, image_scores, image_labels,
+                            label_to_name=self.generator.label_to_name, score_threshold=score_threshold)
+                        # draw_annotations(raw_image, self.generator.load_annotations(images_index),
+                        #     label_to_name=self.generator.label_to_name)
+                        # send to tensorboard
+                        tensorboard_image = tf.expand_dims(tf.image.convert_image_dtype(raw_image, tf.float16), 0)
+                        image_name = self.generator.image_names[images_index]
+                        tf.summary.image(image_name, tensorboard_image, step=epoch,
+                            description='ScoreThreshold: {} MaxDetections: {}'.format(score_threshold, max_detections))
+                        images_index += 1
+                    writer.flush()
 
         logs['mAP'] = self.mean_ap
 
