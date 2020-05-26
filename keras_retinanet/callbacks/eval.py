@@ -62,6 +62,47 @@ class Evaluate(keras.callbacks.Callback):
 
         super(Evaluate, self).__init__()
 
+
+
+
+
+    def image_resize(self, image, width = None, height = None, inter = cv2.INTER_AREA):
+        # initialize the dimensions of the image to be resized and
+        # grab the image size
+        dim = None
+        (h, w) = image.shape[:2]
+    
+        # if both the width and height are None, then return the
+        # original image
+        if width is None and height is None:
+            return image
+    
+        # check to see if the width is None
+        if width is None:
+            # calculate the ratio of the height and construct the
+            # dimensions
+            r = height / float(h)
+            dim = (int(w * r), height)
+    
+        # otherwise, the height is None
+        else:
+            # calculate the ratio of the width and construct the
+            # dimensions
+            r = width / float(w)
+            dim = (width, int(h * r))
+    
+        # resize the image
+        resized = cv2.resize(image, dim, interpolation = inter)
+    
+        # return the resized image
+        return resized
+    
+
+
+
+
+
+
     def on_epoch_end(self, epoch, logs=None):
         logs = logs or {}
 
@@ -129,17 +170,8 @@ class Evaluate(keras.callbacks.Callback):
                         image_name = self.generator.image_names[images_index]
 
                         tensorboard_image = cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB)
-
-                        th = tf.shape(tensorboard_image)[0].numpy()
-                        tw = tf.shape(tensorboard_image)[1].numpy()
-                        print('dimentions: ', th, tw)
-
-#                        tensorboard_image = tf.image.resize_with_pad(raw_image, 1944, 2592)
-
-                        print('raw_image shape: ', tf.shape(tensorboard_image))
+                        tensorboard_image = self.image_resize(tensorboard_image, height=600)
                         tensorboard_image = tf.expand_dims(tensorboard_image, 0)
-                        print('tensorboard_image shape: ', tf.shape(raw_image))
-
 
                         tf.summary.image(image_name, tensorboard_image, step=epoch,
                             description='ScoreThreshold: {} MaxDetections: {}'.format(score_threshold, max_detections))
