@@ -124,11 +124,23 @@ class Evaluate(keras.callbacks.Callback):
                         image_labels = labels[0, indices[scores_sort]]
                         draw_detections(raw_image, image_boxes, image_scores, image_labels,
                             label_to_name=self.generator.label_to_name, score_threshold=score_threshold)
-                        # draw_annotations(raw_image, self.generator.load_annotations(images_index),
-                        #     label_to_name=self.generator.label_to_name)
-                        # send to tensorboard
-                        tensorboard_image = tf.expand_dims(tf.image.convert_image_dtype(raw_image, tf.float16), 0)
+
+                        # create tensorboard image
                         image_name = self.generator.image_names[images_index]
+
+                        tensorboard_image = cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB)
+
+                        th = tf.shape(tensorboard_image)[0].numpy()
+                        tw = tf.shape(tensorboard_image)[1].numpy()
+                        print('dimentions: ', th, tw)
+
+#                        tensorboard_image = tf.image.resize_with_pad(raw_image, 1944, 2592)
+
+                        print('raw_image shape: ', tf.shape(tensorboard_image))
+                        tensorboard_image = tf.expand_dims(tensorboard_image, 0)
+                        print('tensorboard_image shape: ', tf.shape(raw_image))
+
+
                         tf.summary.image(image_name, tensorboard_image, step=epoch,
                             description='ScoreThreshold: {} MaxDetections: {}'.format(score_threshold, max_detections))
                         images_index += 1
