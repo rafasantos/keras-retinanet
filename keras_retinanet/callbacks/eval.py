@@ -139,7 +139,7 @@ class Evaluate(keras.callbacks.Callback):
                 summary_value.tag = "mAP"
                 self.tensorboard.writer.add_summary(summary, epoch)
             else:
-                images_to_generate = min(15, self.generator.size())
+                images_to_generate = min(20, self.generator.size())
                 images_index = 0
                 writer = tf.summary.create_file_writer(self.tensorboard.log_dir)
                 with writer.as_default():
@@ -152,7 +152,7 @@ class Evaluate(keras.callbacks.Callback):
                         # correct boxes for image scale
                         boxes /= scale
                         # select indices which have a score above the threshold
-                        score_threshold = 0.5
+                        score_threshold = 0.4
                         indices = np.where(scores[0, :] > score_threshold)[0]
                         # select those scores
                         scores = scores[0][indices]
@@ -165,16 +165,14 @@ class Evaluate(keras.callbacks.Callback):
                         image_labels = labels[0, indices[scores_sort]]
                         draw_detections(raw_image, image_boxes, image_scores, image_labels,
                             label_to_name=self.generator.label_to_name, score_threshold=score_threshold)
-
                         # create tensorboard image
                         image_name = self.generator.image_names[images_index]
-
                         tensorboard_image = cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB)
-                        tensorboard_image = self.image_resize(tensorboard_image, height=600)
+                        tensorboard_image = self.image_resize(tensorboard_image, height=800)
                         tensorboard_image = tf.expand_dims(tensorboard_image, 0)
-
                         tf.summary.image(image_name, tensorboard_image, step=epoch,
                             description='ScoreThreshold: {} MaxDetections: {}'.format(score_threshold, max_detections))
+
                         images_index += 1
                     writer.flush()
 
