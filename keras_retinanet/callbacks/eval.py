@@ -139,7 +139,7 @@ class Evaluate(keras.callbacks.Callback):
                 summary_value.tag = "mAP"
                 self.tensorboard.writer.add_summary(summary, epoch)
             else:
-                images_to_generate = min(20, self.generator.size())
+                images_to_generate = min(100, self.generator.size())
                 images_index = 0
                 writer = tf.summary.create_file_writer(self.tensorboard.log_dir)
                 with writer.as_default():
